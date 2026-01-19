@@ -14,15 +14,14 @@
 <!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getDatabase, ref, set, update, onValue, remove } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+import { getDatabase, ref, set, get, onValue, remove } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD2_M0SwhaQ90wuEVBdDP91zBc2GDWKglQ",
   authDomain: "hasan-telecom-ad91e.firebaseapp.com",
   databaseURL: "https://hasan-telecom-ad91e-default-rtdb.firebaseio.com",
   projectId: "hasan-telecom-ad91e",
-  storageBucket: "hasan-telecom-ad91e.appspot.com",
+  storageBucket: "hasan-telecom-ad91e.firebasestorage.app",
   messagingSenderId: "199331841561",
   appId: "1:199331841561:web:3e2ef8bdb21f222ee5cc88"
 };
@@ -36,8 +35,7 @@ window.db = getDatabase(app);
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
 <style>
-body { font-family: 'Inter', sans-serif; background-color:#0f172a; }
-.group-header:hover { cursor:pointer; background-color: rgba(59,130,246,0.05);}
+body { font-family: 'Inter', sans-serif; }
 input::placeholder{ color:#64748b;}
 </style>
 </head>
@@ -52,7 +50,7 @@ input::placeholder{ color:#64748b;}
     <button onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl hover:scale-105 transition">
       <span id="themeIcon" class="text-xl">🌙</span>
     </button>
-    <button id="adminBtn" onclick="toggleAdmin()" class="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-sm tracking-widest shadow-lg shadow-blue-900/40 hover:bg-blue-500 transition">LOGIN</button>
+    <button id="adminBtn" onclick="toggleAdmin()" class="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-sm tracking-widest shadow-lg hover:bg-blue-500 transition">LOGIN</button>
     <div id="adminTools" class="hidden flex gap-2">
       <button onclick="generatePDF()" title="Export PDF" class="bg-orange-600 p-4 rounded-2xl text-white shadow-lg hover:bg-orange-500 transition">📄</button>
       <button onclick="logout()" title="Logout" class="bg-red-600 p-4 rounded-2xl text-white shadow-lg hover:bg-red-500 transition">✕</button>
@@ -60,27 +58,11 @@ input::placeholder{ color:#64748b;}
   </div>
 </div>
 
-<!-- Stats Panel -->
-<div id="statsPanel" class="hidden w-full max-w-xl grid grid-cols-3 gap-3 animate-fade-in">
-  <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-    <p class="text-[10px] text-slate-400 font-bold uppercase">Total Items</p>
-    <p id="statTotal" class="text-xl font-black text-blue-500">0</p>
-  </div>
-  <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-    <p class="text-[10px] text-slate-400 font-bold uppercase">Out of Stock</p>
-    <p id="statLow" class="text-xl font-black text-red-500">0</p>
-  </div>
-  <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-    <p class="text-[10px] text-slate-400 font-bold uppercase">Brands</p>
-    <p id="statBrands" class="text-xl font-black text-emerald-500">0</p>
-  </div>
-</div>
-
-<!-- Add Item Panel -->
-<div id="adminPanel" class="hidden w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] p-6 space-y-4 shadow-xl">
-  <input type="text" id="brandInput" placeholder="Brand" class="w-full p-3 border rounded" />
-  <input type="text" id="categoryInput" placeholder="Category" class="w-full p-3 border rounded" />
-  <input type="text" id="subCategoryInput" placeholder="Sub-Category (Optional)" class="w-full p-3 border rounded" />
+<!-- Admin Form -->
+<div id="adminForm" class="hidden w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] p-6 space-y-4 shadow-xl">
+  <input type="text" id="brandInput" placeholder="Brand" class="w-full p-4 border rounded-lg">
+  <input type="text" id="categoryInput" placeholder="Category" class="w-full p-4 border rounded-lg">
+  <input type="text" id="subCategoryInput" placeholder="Sub-category (optional)" class="w-full p-4 border rounded-lg">
 
   <div id="modelsContainer">
     <div class="flex gap-2 mb-2 model-row">
@@ -91,161 +73,160 @@ input::placeholder{ color:#64748b;}
   </div>
   <button type="button" onclick="addRow()" class="bg-blue-500 text-white px-4 py-2 rounded">+ Add Model</button>
 
-  <select id="stockInput" class="p-3 border rounded w-full">
-    <option value="true">In Stock</option>
-    <option value="false">Out of Stock</option>
+  <select id="stockInput" class="p-4 border rounded-lg w-full">
+    <option value="true">In Stock 🟢</option>
+    <option value="false">Out of Stock 🔴</option>
   </select>
 
-  <button onclick="addItem()" class="bg-green-600 text-white px-6 py-3 rounded shadow-lg hover:bg-green-500 transition">Save</button>
+  <button onclick="addItem()" class="bg-green-600 text-white px-6 py-3 rounded-lg w-full font-bold">Save</button>
 </div>
 
 <!-- Search & Vault -->
 <div class="w-full max-w-xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-[32px] p-6 space-y-4 shadow-xl">
-  <input type="text" id="searchInput" onkeyup="render()" placeholder="Search by model, brand, or category" class="w-full p-3 border rounded"/>
+  <input type="text" id="searchInput" onkeyup="render()" placeholder="Search by model..." class="w-full p-4 border rounded-lg">
 </div>
 
 <div id="vaultContent" class="w-full max-w-xl space-y-3"></div>
 <div id="emptyState" class="hidden p-20 text-center text-slate-400 font-bold uppercase text-xs italic">No items found</div>
 
 <script type="module">
-import { getDatabase, ref, set, update, onValue, remove } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
-const db = window.db;
+import { ref, onValue, remove, set } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
 
-// Admin & Theme
 const ADMIN_PASSWORD = "511436";
-window.isAdmin = false;
+let data = [];
+let isAdmin = false;
 
 // THEME
-window.toggleTheme = function() {
-  const dark = document.documentElement.classList.toggle("dark");
-  localStorage.setItem("theme", dark ? "dark" : "light");
-  document.getElementById("themeIcon").innerText = dark ? "☀️" : "🌙";
-};
-if(localStorage.theme==='dark') document.documentElement.classList.add('dark');
+function toggleTheme(){
+  const dark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('theme', dark?'dark':'light');
+  document.getElementById('themeIcon').innerText = dark?'☀️':'🌙';
+}
+if(localStorage.theme==='light'){ document.documentElement.classList.remove('dark'); document.getElementById('themeIcon').innerText='🌙'; }
 
 // LOGIN
-window.toggleAdmin = function() {
+function toggleAdmin(){
   const key = prompt("Admin Key:");
-  if(key===ADMIN_PASSWORD){ window.isAdmin=true; updateUI(); }
-};
-window.logout = function(){ window.isAdmin=false; updateUI(); }
+  if(key===ADMIN_PASSWORD){ isAdmin=true; updateUI(); }
+}
+function logout(){ isAdmin=false; updateUI(); }
 
 function updateUI(){
-  document.getElementById("adminPanel").classList.toggle("hidden", !window.isAdmin);
-  document.getElementById("adminTools").classList.toggle("hidden", !window.isAdmin);
-  document.getElementById("statsPanel").classList.toggle("hidden", !window.isAdmin);
-  document.getElementById("adminBtn").classList.toggle("hidden", window.isAdmin);
-  document.getElementById("modeIndicator").innerText = window.isAdmin?"ADMIN AUTHORIZED":"STAFF VIEW MODE";
+  document.getElementById('adminTools').classList.toggle('hidden', !isAdmin);
+  document.getElementById('adminForm').classList.toggle('hidden', !isAdmin);
+  document.getElementById('adminBtn').classList.toggle('hidden', isAdmin);
+  document.getElementById('modeIndicator').innerText = isAdmin?"ADMIN AUTHORIZED":"STAFF VIEW MODE";
+  render();
 }
 
-// MODEL ROW MANAGEMENT
+// MODELS FORM
 window.addRow = function(){
-  const container=document.getElementById("modelsContainer");
-  const div=document.createElement("div");
+  const container = document.getElementById("modelsContainer");
+  const div = document.createElement("div");
   div.className="flex gap-2 mb-2 model-row";
-  div.innerHTML=`
+  div.innerHTML = `
     <input type="text" class="modelNameInput p-2 border rounded" placeholder="Model Name">
     <input type="text" class="modelPriceInput p-2 border rounded" placeholder="Price ৳">
     <button type="button" onclick="removeRow(this)" class="bg-red-500 text-white px-2 rounded">✕</button>
   `;
   container.appendChild(div);
 };
-window.removeRow=function(btn){ btn.parentElement.remove(); };
+window.removeRow = function(btn){ btn.parentElement.remove(); };
 
-// SAVE ITEMS
-window.addItem=function(){
-  const brand=document.getElementById("brandInput").value.trim();
-  const category=document.getElementById("categoryInput").value.trim();
-  let subCategory=document.getElementById("subCategoryInput").value.trim();
-  if(!subCategory) subCategory="—";
-  const stock=document.getElementById("stockInput").value==="true";
+// ADD ITEM
+window.addItem = async function(){
+  const brand = document.getElementById("brandInput").value.trim();
+  const category = document.getElementById("categoryInput").value.trim();
+  let subCategory = document.getElementById("subCategoryInput").value.trim();
+  if(!subCategory) subCategory = "—";
+  const stock = document.getElementById("stockInput").value === "true";
 
   if(!brand || !category) return alert("Brand and Category required");
 
-  const rows=document.querySelectorAll(".model-row");
+  const rows = document.querySelectorAll(".model-row");
   if(!rows.length) return alert("Add at least one model");
 
-  const updates={};
-  rows.forEach(row=>{
-    const model=row.querySelector(".modelNameInput").value.trim();
-    let price=row.querySelector(".modelPriceInput").value.trim();
-    if(!model) return;
-    if(!price.startsWith("৳")) price="৳ "+price;
-    const id=Date.now().toString()+Math.floor(Math.random()*10000);
-    updates[id]={id, brand, category, subCategory, model, price, inStock:stock};
-  });
-
-  update(ref(db, "inventory"), updates)
-    .then(()=>{
-      alert("Saved "+rows.length+" model(s) ✅");
-      document.getElementById("modelsContainer").innerHTML="";
-      addRow();
-    })
-    .catch(err=>alert("Error: "+err.message));
+  try {
+    for(const row of rows){
+      const model = row.querySelector(".modelNameInput").value.trim();
+      let price = row.querySelector(".modelPriceInput").value.trim();
+      if(!model) continue;
+      if(!price.startsWith("৳")) price = "৳ " + price;
+      const id = Date.now().toString() + Math.floor(Math.random()*10000);
+      await set(ref(db,"inventory/"+id), {id, brand, category, subCategory, model, price, inStock:stock});
+    }
+    alert(`Saved ${rows.length} model(s) ✅`);
+    document.getElementById("modelsContainer").innerHTML = "";
+    addRow();
+    document.getElementById("brandInput").value="";
+    document.getElementById("categoryInput").value="";
+    document.getElementById("subCategoryInput").value="";
+  } catch(err){ alert("Error: "+err.message); }
 };
 
-// LOAD INVENTORY
-let data=[];
+// LOAD DATA
 function loadInventory(){
-  const dbRef=ref(db, "inventory");
+  const dbRef = ref(db,"inventory");
   onValue(dbRef, snapshot=>{
-    data = snapshot.val()?Object.values(snapshot.val()):[];
+    const val = snapshot.val();
+    data = val?Object.values(val):[];
     render();
   });
 }
 
-// UPDATE PRICE & STOCK
-window.updatePrice=function(id,newPrice){
-  if(!newPrice.startsWith("৳")) newPrice="৳ "+newPrice;
-  set(ref(db,"inventory/"+id+"/price"),newPrice);
-};
-window.toggleStock=function(id){
-  const stockRef=ref(db,"inventory/"+id+"/inStock");
-  onValue(stockRef,snap=>{ set(stockRef,!snap.val()); },{onlyOnce:true});
-};
-
-// PDF EXPORT
-window.generatePDF=function(){
-  const { jsPDF }=window.jspdf;
-  const doc=new jsPDF();
-  doc.setFontSize(20);
-  doc.text("HASAN TELECOM - INVENTORY REPORT",14,20);
-  const tableRows=data.map(i=>[i.brand,i.category,i.subCategory,i.model,i.price,i.inStock?"Yes":"No"]);
-  doc.autoTable({ startY:30, head:[["Brand","Category","Sub","Model","Price","Stock"]], body:tableRows });
-  doc.save("HasanTelecom_Report.pdf");
-};
-
-// RENDER
-window.render=function(){
-  const search=document.getElementById("searchInput").value.toLowerCase();
-  const container=document.getElementById("vaultContent");
-  const filtered=data.filter(i=>(`${i.brand} ${i.category} ${i.subCategory} ${i.model}`).toLowerCase().includes(search));
+// RENDER VAULT
+window.render = function(){
+  const search = document.getElementById("searchInput").value.toLowerCase();
+  const container = document.getElementById("vaultContent");
+  const filtered = data.filter(i=>`${i.model} ${i.brand} ${i.category} ${i.subCategory}`.toLowerCase().includes(search));
   container.innerHTML="";
   filtered.forEach(item=>{
     container.innerHTML+=`
     <div class="bg-white dark:bg-slate-900 rounded-[24px] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm p-4 flex justify-between items-center">
       <div>
         <span class="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded-lg">${item.brand}</span>
-        <div class="text-sm font-bold mt-1">${item.model}</div>
-        <div class="text-xs text-slate-400">${item.category} / ${item.subCategory}</div>
+        <h3 class="text-lg font-bold dark:text-white mt-1">${item.model}</h3>
+        <div class="text-xs">${item.category} > ${item.subCategory}</div>
       </div>
       <div class="flex flex-col items-end gap-1">
-        <div contenteditable="true" onblur="updatePrice('${item.id}', this.innerText)" class="font-mono font-bold text-blue-600 dark:text-blue-400">${item.price}</div>
+        ${isAdmin?`<div contenteditable="true" onblur="updatePrice('${item.id}', this.innerText)" class="font-mono font-bold text-blue-600">${item.price}</div>`:`<div class="font-mono font-bold text-blue-600">${item.price}</div>`}
         <div onclick="toggleStock('${item.id}')" class="cursor-pointer">${item.inStock?"🟢":"🔴"}</div>
+        ${isAdmin?`<button onclick="deleteItem('${item.id}')" class="text-red-500 hover:text-red-700">✕</button>`:""}
       </div>
     </div>`;
   });
   document.getElementById("emptyState").classList.toggle("hidden", filtered.length>0);
+};
 
-  if(window.isAdmin){
-    document.getElementById("statTotal").innerText=data.length;
-    document.getElementById("statLow").innerText=data.filter(i=>!i.inStock).length;
-    document.getElementById("statBrands").innerText=new Set(data.map(i=>i.brand)).size;
-  }
-}
+// UPDATE PRICE
+window.updatePrice = function(id,newPrice){
+  if(!newPrice.startsWith("৳")) newPrice="৳ "+newPrice;
+  set(ref(db,"inventory/"+id+"/price"), newPrice);
+};
 
+// TOGGLE STOCK
+window.toggleStock = function(id){
+  const stockRef = ref(db,"inventory/"+id+"/inStock");
+  get(stockRef).then(snap=>{ set(stockRef,!snap.val()); });
+};
+
+// DELETE ITEM
+window.deleteItem = function(id){ if(confirm("Delete this item?")) remove(ref(db,"inventory/"+id)); };
+
+// PDF EXPORT
+window.generatePDF = function(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(20);
+  doc.text("HASAN TELECOM - INVENTORY REPORT",14,20);
+  const tableRows = data.map(i=>[i.brand,i.model,i.category,i.subCategory,i.inStock?"YES":"NO",i.price]);
+  doc.autoTable({ startY:30, head:[['Brand','Model','Category','Sub-category','Stock','Price']], body:tableRows });
+  doc.save('HasanTelecom_Report.pdf');
+};
+
+// INITIAL LOAD
 loadInventory();
+addRow();
 </script>
-
 </body>
 </html>
