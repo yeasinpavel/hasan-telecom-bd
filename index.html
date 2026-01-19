@@ -11,17 +11,37 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={darkMode:'class'}</script>
 
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getDatabase, ref, set, update, onValue, remove } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyD2_M0SwhaQ90wuEVBdDP91zBc2GDWKglQ",
+  authDomain: "hasan-telecom-ad91e.firebaseapp.com",
+  databaseURL: "https://hasan-telecom-ad91e-default-rtdb.firebaseio.com",
+  projectId: "hasan-telecom-ad91e",
+  storageBucket: "hasan-telecom-ad91e.appspot.com",
+  messagingSenderId: "199331841561",
+  appId: "1:199331841561:web:3e2ef8bdb21f222ee5cc88"
+};
+
+const app = initializeApp(firebaseConfig);
+window.db = getDatabase(app);
+</script>
+
 <!-- jsPDF for PDF Export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
 <style>
-body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s;}
+body { font-family: 'Inter', sans-serif; background-color:#0f172a; }
 .group-header:hover { cursor:pointer; background-color: rgba(59,130,246,0.05);}
 input::placeholder{ color:#64748b;}
 </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen p-4 md:p-8 flex flex-col items-center gap-6">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen p-4 md:p-8 flex flex-col items-center gap-6 transition-colors duration-300">
 
 <!-- Header -->
 <div class="w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] p-8 flex flex-col items-center text-center shadow-2xl">
@@ -40,21 +60,6 @@ input::placeholder{ color:#64748b;}
   </div>
 </div>
 
-<!-- Admin Add Item Panel -->
-<div id="adminPanel" class="hidden w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] p-6 space-y-3 shadow-xl">
-  <h2 class="text-blue-600 font-bold mb-2">Add New Item</h2>
-  <input type="text" id="brandInput" placeholder="Brand" class="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950 outline-none">
-  <input type="text" id="categoryInput" placeholder="Category" class="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950 outline-none">
-  <input type="text" id="subCategoryInput" placeholder="Sub-category" class="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950 outline-none">
-  <textarea id="modelInput" placeholder="Model (one per line for multiple)" class="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950 outline-none"></textarea>
-  <input type="text" id="priceInput" placeholder="Price in BDT (e.g., 3500)" class="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950 outline-none">
-  <select id="stockInput" class="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950 outline-none">
-    <option value="true">In Stock</option>
-    <option value="false">Out of Stock</option>
-  </select>
-  <button onclick="addItem()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">SAVE ITEM</button>
-</div>
-
 <!-- Stats Panel -->
 <div id="statsPanel" class="hidden w-full max-w-xl grid grid-cols-3 gap-3 animate-fade-in">
   <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
@@ -71,38 +76,42 @@ input::placeholder{ color:#64748b;}
   </div>
 </div>
 
-<!-- Search -->
-<div class="w-full max-w-xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-[32px] p-6 space-y-4 shadow-xl">
-  <div class="relative">
-    <input type="text" id="searchInput" onkeyup="render()" placeholder="Search by Model/Brand/Category" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl text-slate-900 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500 transition">
-    <span class="absolute right-5 top-5 opacity-20">🔍</span>
+<!-- Add Item Panel -->
+<div id="adminPanel" class="hidden w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] p-6 space-y-4 shadow-xl">
+  <input type="text" id="brandInput" placeholder="Brand" class="w-full p-3 border rounded" />
+  <input type="text" id="categoryInput" placeholder="Category" class="w-full p-3 border rounded" />
+  <input type="text" id="subCategoryInput" placeholder="Sub-Category (Optional)" class="w-full p-3 border rounded" />
+
+  <div id="modelsContainer">
+    <div class="flex gap-2 mb-2 model-row">
+      <input type="text" class="modelNameInput p-2 border rounded" placeholder="Model Name">
+      <input type="text" class="modelPriceInput p-2 border rounded" placeholder="Price ৳">
+      <button type="button" onclick="removeRow(this)" class="bg-red-500 text-white px-2 rounded">✕</button>
+    </div>
   </div>
+  <button type="button" onclick="addRow()" class="bg-blue-500 text-white px-4 py-2 rounded">+ Add Model</button>
+
+  <select id="stockInput" class="p-3 border rounded w-full">
+    <option value="true">In Stock</option>
+    <option value="false">Out of Stock</option>
+  </select>
+
+  <button onclick="addItem()" class="bg-green-600 text-white px-6 py-3 rounded shadow-lg hover:bg-green-500 transition">Save</button>
 </div>
 
-<!-- Vault Content -->
+<!-- Search & Vault -->
+<div class="w-full max-w-xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-[32px] p-6 space-y-4 shadow-xl">
+  <input type="text" id="searchInput" onkeyup="render()" placeholder="Search by model, brand, or category" class="w-full p-3 border rounded"/>
+</div>
+
 <div id="vaultContent" class="w-full max-w-xl space-y-3"></div>
-<div id="emptyState" class="hidden p-20 text-center text-slate-400 font-bold uppercase text-xs italic">No items found matching your filter</div>
+<div id="emptyState" class="hidden p-20 text-center text-slate-400 font-bold uppercase text-xs italic">No items found</div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+import { getDatabase, ref, set, update, onValue, remove } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+const db = window.db;
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyD2_M0SwhaQ90wuEVBdDP91zBc2GDWKglQ",
-  authDomain: "hasan-telecom-ad91e.firebaseapp.com",
-  databaseURL: "https://hasan-telecom-ad91e-default-rtdb.firebaseio.com",
-  projectId: "hasan-telecom-ad91e",
-  storageBucket: "hasan-telecom-ad91e.appspot.com",
-  messagingSenderId: "199331841561",
-  appId: "1:199331841561:web:3e2ef8bdb21f222ee5cc88"
-};
-
-const app = initializeApp(firebaseConfig);
-window.db = getDatabase(app); // make db globally accessible
-</script>
-
-<script>
+// Admin & Theme
 const ADMIN_PASSWORD = "511436";
 window.isAdmin = false;
 
@@ -112,26 +121,14 @@ window.toggleTheme = function() {
   localStorage.setItem("theme", dark ? "dark" : "light");
   document.getElementById("themeIcon").innerText = dark ? "☀️" : "🌙";
 };
+if(localStorage.theme==='dark') document.documentElement.classList.add('dark');
 
-document.addEventListener("DOMContentLoaded", () => {
-  if(localStorage.theme === 'dark') document.documentElement.classList.add('dark');
-  if(localStorage.theme === 'light') document.documentElement.classList.remove('dark');
-  document.getElementById("themeIcon").innerText = document.documentElement.classList.contains("dark") ? "☀️" : "🌙";
-});
-
-// ADMIN LOGIN
+// LOGIN
 window.toggleAdmin = function() {
   const key = prompt("Admin Key:");
-  if(key === ADMIN_PASSWORD){
-    window.isAdmin = true;
-    updateUI();
-  }
+  if(key===ADMIN_PASSWORD){ window.isAdmin=true; updateUI(); }
 };
-
-window.logout = function() {
-  window.isAdmin = false;
-  updateUI();
-};
+window.logout = function(){ window.isAdmin=false; updateUI(); }
 
 function updateUI(){
   document.getElementById("adminPanel").classList.toggle("hidden", !window.isAdmin);
@@ -139,137 +136,116 @@ function updateUI(){
   document.getElementById("statsPanel").classList.toggle("hidden", !window.isAdmin);
   document.getElementById("adminBtn").classList.toggle("hidden", window.isAdmin);
   document.getElementById("modeIndicator").innerText = window.isAdmin?"ADMIN AUTHORIZED":"STAFF VIEW MODE";
-  render();
 }
 
-// DATA
-window.data = [];
-const dbRef = ref(window.db, "inventory");
-onValue(dbRef, snapshot=>{
-  window.data = snapshot.val() ? Object.values(snapshot.val()) : [];
-  render();
-});
+// MODEL ROW MANAGEMENT
+window.addRow = function(){
+  const container=document.getElementById("modelsContainer");
+  const div=document.createElement("div");
+  div.className="flex gap-2 mb-2 model-row";
+  div.innerHTML=`
+    <input type="text" class="modelNameInput p-2 border rounded" placeholder="Model Name">
+    <input type="text" class="modelPriceInput p-2 border rounded" placeholder="Price ৳">
+    <button type="button" onclick="removeRow(this)" class="bg-red-500 text-white px-2 rounded">✕</button>
+  `;
+  container.appendChild(div);
+};
+window.removeRow=function(btn){ btn.parentElement.remove(); };
 
-// ADD ITEM
-window.addItem = function(){
-  const brand = document.getElementById("brandInput").value.trim();
-  const category = document.getElementById("categoryInput").value.trim();
-  const subCategory = document.getElementById("subCategoryInput").value.trim();
-  const models = document.getElementById("modelInput").value.split("\n").map(m=>m.trim()).filter(Boolean);
-  const priceRaw = document.getElementById("priceInput").value.trim();
-  const stock = document.getElementById("stockInput").value === "true";
+// SAVE ITEMS
+window.addItem=function(){
+  const brand=document.getElementById("brandInput").value.trim();
+  const category=document.getElementById("categoryInput").value.trim();
+  let subCategory=document.getElementById("subCategoryInput").value.trim();
+  if(!subCategory) subCategory="—";
+  const stock=document.getElementById("stockInput").value==="true";
 
-  if(!brand || !category || !models.length || !priceRaw){
-    alert("Please fill all required fields");
-    return;
-  }
+  if(!brand || !category) return alert("Brand and Category required");
 
-  const price = priceRaw.startsWith("৳") ? priceRaw : "৳ "+priceRaw;
+  const rows=document.querySelectorAll(".model-row");
+  if(!rows.length) return alert("Add at least one model");
 
-  models.forEach(model=>{
-    const item = {
-      id: Date.now().toString() + Math.random(),
-      brand,
-      category,
-      subCategory,
-      model,
-      price,
-      inStock: stock
-    };
-    set(ref(window.db, "inventory/" + item.id), item);
+  const updates={};
+  rows.forEach(row=>{
+    const model=row.querySelector(".modelNameInput").value.trim();
+    let price=row.querySelector(".modelPriceInput").value.trim();
+    if(!model) return;
+    if(!price.startsWith("৳")) price="৳ "+price;
+    const id=Date.now().toString()+Math.floor(Math.random()*10000);
+    updates[id]={id, brand, category, subCategory, model, price, inStock:stock};
   });
 
-  alert(models.length + " model(s) saved ✅");
-  document.getElementById("modelInput").value = "";
-  document.getElementById("priceInput").value = "";
+  update(ref(db, "inventory"), updates)
+    .then(()=>{
+      alert("Saved "+rows.length+" model(s) ✅");
+      document.getElementById("modelsContainer").innerHTML="";
+      addRow();
+    })
+    .catch(err=>alert("Error: "+err.message));
 };
 
-// DELETE ITEM
-window.deleteItem = function(id){
-  if(confirm("Delete this item?")){
-    remove(ref(window.db, "inventory/"+id));
-  }
+// LOAD INVENTORY
+let data=[];
+function loadInventory(){
+  const dbRef=ref(db, "inventory");
+  onValue(dbRef, snapshot=>{
+    data = snapshot.val()?Object.values(snapshot.val()):[];
+    render();
+  });
+}
+
+// UPDATE PRICE & STOCK
+window.updatePrice=function(id,newPrice){
+  if(!newPrice.startsWith("৳")) newPrice="৳ "+newPrice;
+  set(ref(db,"inventory/"+id+"/price"),newPrice);
+};
+window.toggleStock=function(id){
+  const stockRef=ref(db,"inventory/"+id+"/inStock");
+  onValue(stockRef,snap=>{ set(stockRef,!snap.val()); },{onlyOnce:true});
 };
 
-// TOGGLE STOCK
-window.toggleStock = function(id){
-  const item = window.data.find(i=>i.id===id);
-  if(item){
-    item.inStock = !item.inStock;
-    set(ref(window.db, "inventory/"+id), item);
-  }
+// PDF EXPORT
+window.generatePDF=function(){
+  const { jsPDF }=window.jspdf;
+  const doc=new jsPDF();
+  doc.setFontSize(20);
+  doc.text("HASAN TELECOM - INVENTORY REPORT",14,20);
+  const tableRows=data.map(i=>[i.brand,i.category,i.subCategory,i.model,i.price,i.inStock?"Yes":"No"]);
+  doc.autoTable({ startY:30, head:[["Brand","Category","Sub","Model","Price","Stock"]], body:tableRows });
+  doc.save("HasanTelecom_Report.pdf");
 };
 
 // RENDER
-function render(){
-  const q = document.getElementById("searchInput").value.toLowerCase();
-  const vaultContent = document.getElementById("vaultContent");
-  const emptyState = document.getElementById("emptyState");
-  vaultContent.innerHTML = "";
-
-  const filtered = window.data.filter(i=>
-    i.model.toLowerCase().includes(q) ||
-    i.brand.toLowerCase().includes(q) ||
-    i.category.toLowerCase().includes(q)
-  );
-
-  if(filtered.length===0){
-    emptyState.classList.remove("hidden");
-    return;
-  } else emptyState.classList.add("hidden");
-
-  // Group by model
-  const grouped = {};
-  filtered.forEach(i=>{
-    if(!grouped[i.model]) grouped[i.model] = [];
-    grouped[i.model].push(i);
-  });
-
-  Object.keys(grouped).sort().forEach(model=>{
-    const items = grouped[model];
-    vaultContent.innerHTML += `
-      <div class="bg-white dark:bg-slate-900 rounded-2xl shadow overflow-hidden mb-4">
-        <div class="p-4 font-bold text-blue-600 text-lg border-b border-slate-200 dark:border-slate-800">${model}</div>
-        <div class="divide-y dark:divide-slate-800">
-          ${items.map(i=>`
-            <div class="flex justify-between items-center p-3 text-sm">
-              <div>
-                <span class="text-xs text-orange-500 font-bold">${i.category}</span><br>
-                <span class="text-xs text-slate-400">${i.brand}</span>
-              </div>
-              <div class="font-mono font-bold text-blue-600">${i.price}</div>
-              <div onclick="toggleStock('${i.id}')" class="cursor-pointer">${i.inStock?"🟢":"🔴"}</div>
-              ${window.isAdmin?`<button onclick="deleteItem('${i.id}')" class="text-red-500">✕</button>`:""}
-            </div>
-          `).join("")}
-        </div>
+window.render=function(){
+  const search=document.getElementById("searchInput").value.toLowerCase();
+  const container=document.getElementById("vaultContent");
+  const filtered=data.filter(i=>(`${i.brand} ${i.category} ${i.subCategory} ${i.model}`).toLowerCase().includes(search));
+  container.innerHTML="";
+  filtered.forEach(item=>{
+    container.innerHTML+=`
+    <div class="bg-white dark:bg-slate-900 rounded-[24px] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm p-4 flex justify-between items-center">
+      <div>
+        <span class="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded-lg">${item.brand}</span>
+        <div class="text-sm font-bold mt-1">${item.model}</div>
+        <div class="text-xs text-slate-400">${item.category} / ${item.subCategory}</div>
       </div>
-    `;
-
+      <div class="flex flex-col items-end gap-1">
+        <div contenteditable="true" onblur="updatePrice('${item.id}', this.innerText)" class="font-mono font-bold text-blue-600 dark:text-blue-400">${item.price}</div>
+        <div onclick="toggleStock('${item.id}')" class="cursor-pointer">${item.inStock?"🟢":"🔴"}</div>
+      </div>
+    </div>`;
   });
+  document.getElementById("emptyState").classList.toggle("hidden", filtered.length>0);
 
   if(window.isAdmin){
-    document.getElementById("statTotal").innerText = window.data.length;
-    document.getElementById("statLow").innerText = window.data.filter(i=>!i.inStock).length;
-    document.getElementById("statBrands").innerText = new Set(window.data.map(i=>i.brand)).size;
+    document.getElementById("statTotal").innerText=data.length;
+    document.getElementById("statLow").innerText=data.filter(i=>!i.inStock).length;
+    document.getElementById("statBrands").innerText=new Set(data.map(i=>i.brand)).size;
   }
 }
 
-// PDF EXPORT
-window.generatePDF = function(){
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.setFontSize(20);
-  doc.text("HASAN TELECOM - INVENTORY REPORT",14,20);
-
-  const tableRows = [];
-  window.data.forEach(i=>{
-    tableRows.push([i.brand,i.category,i.subCategory,i.model,i.inStock?"YES":"NO",i.price]);
-  });
-
-  doc.autoTable({startY:30, head:[['Brand','Category','Sub-category','Model','Stock','Price']], body:tableRows});
-  doc.save("HasanTelecom_Report.pdf");
-};
+loadInventory();
 </script>
+
 </body>
 </html>
