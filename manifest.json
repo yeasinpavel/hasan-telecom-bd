@@ -1,11 +1,11 @@
 {
-  "name": "HASAN TELECOM Vault",
-  "short_name": "HT Vault",
+  "name": "Hasan Telecom Inventory",
+  "short_name": "HTInventory",
+  "description": "Manage inventory of Hasan Telecom with offline support",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
+  "background_color": "#f8fafc",
   "theme_color": "#2563eb",
-  "description": "Inventory management for Hasan Telecom",
   "icons": [
     {
       "src": "icon-192.png",
