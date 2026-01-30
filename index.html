@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>HASAN TELECOM - Pro Vault v2.2</title>
+<title>HASAN TELECOM - Pro Vault v2.3</title>
 
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="logo.png">
@@ -38,6 +38,7 @@ body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparen
         <div id="adminTools" class="hidden flex gap-2">
             <button onclick="exportExcel()" title="Export Excel" class="bg-orange-600 p-4 rounded-2xl text-white shadow-lg">📄</button>
             <button onclick="downloadBackup()" title="Backup" class="bg-emerald-600 p-4 rounded-2xl text-white shadow-lg">💾</button>
+            <button onclick="toggleSelectMode()" title="Select & Delete Mode" class="bg-purple-600 p-4 rounded-2xl text-white shadow-lg">🗑️</button>
             <button onclick="logout()" title="Logout" class="bg-red-600 p-4 rounded-2xl text-white shadow-lg">✕</button>
         </div>
     </div>
@@ -88,6 +89,8 @@ const CATEGORIES = ["Logic Board","Front Camera","Main Flex","LCD Flex","Finger 
 
 let data = JSON.parse(localStorage.getItem('ht_vault_v2')) || [];
 let isAdmin = false;
+let selectMode = false;
+let selectedItems = new Set();
 let expandedModels = new Set();
 let searchTimer;
 let lastFiltered = [];
@@ -109,7 +112,7 @@ function toggleAdmin(){
         updateUI();
     }
 }
-function logout(){ isAdmin = false; updateUI(); }
+function logout(){ isAdmin = false; selectMode=false; selectedItems.clear(); updateUI(); }
 
 function updateUI(){
     adminPanel.classList.toggle('hidden', !isAdmin);
@@ -117,6 +120,12 @@ function updateUI(){
     statsPanel.classList.toggle('hidden', !isAdmin);
     adminBtn.classList.toggle('hidden', isAdmin);
     modeIndicator.textContent = isAdmin ? "ADMIN AUTHORIZED" : "STAFF VIEW MODE";
+    render();
+}
+
+function toggleSelectMode(){
+    selectMode = !selectMode;
+    selectedItems.clear();
     render();
 }
 
@@ -161,6 +170,9 @@ function render(){
 
     lastFiltered = data.filter(i=>{
         const blob = `${i.brand} ${i.name} ${i.cat}`.toLowerCase();
+        if(searchInput.value.toLowerCase().trim() === "out") {
+            return !i.inStock && (brandFilter==="ALL"||i.brand===brandFilter);
+        }
         return searchTerms.every(t=>blob.includes(t)) &&
                (brandFilter==="ALL"||i.brand===brandFilter);
     });
@@ -178,21 +190,21 @@ function render(){
     } else resultCount.classList.add('hidden');
 
     const groups = lastFiltered.reduce((acc,i)=>{
-        (acc[i.name]=acc[i.name]||[]).push(i);
+        const key = `${i.brand}||${i.name}`;
+        (acc[key]=acc[key]||[]).push(i);
         return acc;
     },{});
 
     let html='';
-    Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'})).forEach(model=>{
-        const items = groups[model];
-        const open = expandedModels.has(model);
-        html+=`
-        <div class="bg-white dark:bg-slate-900 rounded-[24px] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-            <div onclick="toggleModel('${model}')" class="group-header p-5 flex justify-between items-center select-none">
+    Object.keys(groups).sort().forEach(key=>{
+        const [brand, model] = key.split('||');
+        const items = groups[key];
+        const open = expandedModels.has(key);
+        html+=
+        `<div class="bg-white dark:bg-slate-900 rounded-[24px] border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div onclick="toggleModel('${key}')" class="group-header p-5 flex justify-between items-center select-none">
                 <div>
-                    <span class="text-[9px] font-black text-orange-500 bg-orange-100 dark:bg-orange-900/20 px-2 py-1 rounded-md">
-                        ${items[0].brand}
-                    </span>
+                    <span class="text-[9px] font-black text-orange-500 bg-orange-100 dark:bg-orange-900/20 px-2 py-1 rounded-md">${brand}</span>
                     <h3 class="text-lg font-bold dark:text-white">${model}</h3>
                 </div>
                 <span class="transform transition-transform ${open?'rotate-180':''} opacity-30">▼</span>
@@ -200,15 +212,17 @@ function render(){
             <div class="${open?'block':'hidden'} bg-slate-50 dark:bg-slate-950/50 border-t">
                 <table class="w-full text-sm">
                     <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
-                        ${items.map(item=>`
-                        <tr>
+                        ${items.map(item=>
+                        `<tr class="${selectMode && selectedItems.has(item.id)?'bg-red-100 dark:bg-red-900/30':''}">
+                            ${selectMode?`<td class="px-2 py-4 text-center"><input type="checkbox" onchange="toggleSelect(${item.id}, this)" ${selectedItems.has(item.id)?'checked':''}></td>`:''}
                             <td class="px-6 py-4 font-bold text-xs uppercase text-slate-500">${item.cat}</td>
-                            <td onclick="toggleStock(${item.id})" class="px-2 py-4 text-center text-[9px] font-black cursor-pointer">
+                            <td onclick="${selectMode?'':'toggleStock('+item.id+')'}" class="px-2 py-4 text-center text-[9px] font-black cursor-pointer">
                                 ${item.inStock?'<span class="text-emerald-500">IN STOCK</span>':'<span class="text-red-500">OUT</span>'}
                             </td>
                             <td class="px-6 py-4 text-right font-mono font-bold text-blue-600">
-                                ${(item.price==="Contact"&&isAdmin)?`<button onclick="modifyPrice(${item.id})" class="bg-blue-600 text-white text-[10px] px-3 py-1 rounded-lg">SET</button>`:`৳${item.price}`}</td>
-                            ${isAdmin?`<td class="w-10 pr-4 text-right"><button onclick="deleteItem(${item.id})" class="text-red-400">✕</button></td>`:''}
+                                ${(item.price==="Contact"&&isAdmin)?`<button onclick="modifyPrice(${item.id})" class="bg-blue-600 text-white text-[10px] px-3 py-1 rounded-lg">SET</button>`:'৳'+item.price}
+                            </td>
+                            ${isAdmin && !selectMode?`<td class="w-10 pr-4 text-right"><button onclick="deleteItem(${item.id})" class="text-red-400">✕</button></td>`:''}
                         </tr>`).join('')}
                     </tbody>
                 </table>
@@ -220,7 +234,20 @@ function render(){
     emptyState.classList.toggle('hidden', lastFiltered.length>0);
 }
 
-function toggleModel(m){ expandedModels.has(m)?expandedModels.delete(m):expandedModels.add(m); render(); }
+function toggleSelect(id, checkbox){
+    if(checkbox.checked) selectedItems.add(id);
+    else selectedItems.delete(id);
+}
+
+function deleteSelected(){
+    if(selectedItems.size && confirm("Delete selected items?")){
+        data = data.filter(x=>!selectedItems.has(x.id));
+        selectedItems.clear();
+        save();
+    }
+}
+
+function toggleModel(key){ expandedModels.has(key)?expandedModels.delete(key):expandedModels.add(key); render(); }
 function modifyPrice(id){ const p=prompt("Price:"); if(p!==null){ const i=data.find(x=>x.id===id); if(i){ i.price=p.trim()||"Contact"; save(); } } }
 function toggleStock(id){ if(isAdmin){ const i=data.find(x=>x.id===id); if(i){ i.inStock=!i.inStock; save(); } } }
 function deleteItem(id){ if(confirm("Delete?")){ data=data.filter(x=>x.id!==id); save(); } }
@@ -239,19 +266,26 @@ function importBackup(e){ const r=new FileReader(); r.onload=()=>{ data=JSON.par
 
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('./sw.js'); }); }
 
-// ===== Scroll-to-collapse behavior =====
-vaultContent.addEventListener('scroll',()=>{ 
-    if(expandedModels.size>0){
-        expandedModels.clear(); 
-        render(); 
+// ===== Scroll-to-collapse after 200px =====
+let lastScrollWindow = window.scrollY || 0;
+let lastScrollVault = vaultContent.scrollTop || 0;
+const collapseThreshold = 200;
+
+window.addEventListener('scroll', () => {
+    const currentScroll = window.scrollY || 0;
+    if (expandedModels.size > 0 && Math.abs(currentScroll - lastScrollWindow) >= collapseThreshold) {
+        expandedModels.clear();
+        render();
+        lastScrollWindow = currentScroll;
     }
 });
 
-// Also collapse on window scroll for page scrolling
-window.addEventListener('scroll',()=>{
-    if(expandedModels.size>0){
+vaultContent.addEventListener('scroll', () => {
+    const currentScroll = vaultContent.scrollTop || 0;
+    if (expandedModels.size > 0 && Math.abs(currentScroll - lastScrollVault) >= collapseThreshold) {
         expandedModels.clear();
         render();
+        lastScrollVault = currentScroll;
     }
 });
 
@@ -259,4 +293,3 @@ render();
 </script>
 </body>
 </html>
-
